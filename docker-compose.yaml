@@ -8,8 +8,15 @@ services:
       - "15432:5432"
     environment:
       POSTGRES_PASSWORD: postgres
-    # volumes:
-    #   - "${PWD}/postgres-data:/var/lib/postgresql/data/"
+
+  roach0:
+    image: cockroachdb/cockroach:latest
+    ports:
+      - "26256:26257"
+      - "8079:8080"
+    command:
+      - start-single-node
+      - --insecure
 
   roach1:
     image: cockroachdb/cockroach:latest
@@ -25,8 +32,6 @@ services:
       - --sql-addr=roach1:26257
       - --insecure
       - --join=roach1:26357,roach2:26357,roach3:26357
-    # volumes:
-    #   - "${PWD}/cockroach-data/roach1:/cockroach/cockroach-data"
 
   roach2:
     image: cockroachdb/cockroach:latest
@@ -42,8 +47,6 @@ services:
       - --sql-addr=roach2:26258
       - --insecure
       - --join=roach1:26357,roach2:26357,roach3:26357
-    # volumes:
-    #   - "${PWD}/cockroach-data/roach2:/cockroach/cockroach-data"
 
   roach3:
     image: cockroachdb/cockroach:latest
@@ -59,5 +62,3 @@ services:
       - --sql-addr=roach3:26259
       - --insecure
       - --join=roach1:26357,roach2:26357,roach3:26357
-    # volumes:
-    #   - "${PWD}/cockroach-data/roach3:/cockroach/cockroach-data"
