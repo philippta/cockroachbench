@@ -1,5 +1,5 @@
 #!/bin/bash
 
-apt update && apt install -y postgresql vim
+apt update && apt install -y postgresql
 
-pgbench -i -F 1000 -d postgres -h 10.0.0.2 -p 5432 -n
+# pgbench <database> -h <host> -p <port> -U <user> -n -t 5000
