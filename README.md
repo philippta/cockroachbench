@@ -3,6 +3,13 @@
 This benchmarking report compares the performance of **PostgreSQL** and **CockroachDB** using the **TPC-B** benchmark. 
 TPC-B simulates a banking environment with high transaction throughput, focusing on operations like account balance updates, teller transactions, and branch fund management.
 
+What I am benchmarking:
+
+- PostgreSQL Single Instance
+- PostgreSQL Primary/Standby with Synchronous Streaming Replication
+- CockroachDB Single Node Cluster
+- CockroachDB 3 Node Cluster
+
 ## Environment
 
 All databases were running on **CCX13** instances from Hetzner, with these specs:
@@ -29,7 +36,8 @@ The benchmark was run from another seperate server, also within the same local n
 
 ## Benchmark Setup
 
-In this setup I'm using the `pgbench` utility provided by a default PostgreSQL installation. It runs the TPC-B benchmark as mentioned above.
+In this setup I'm using the `pgbench` utility provided by a default PostgreSQL installation. 
+It runs the TPC-B benchmark as mentioned above.
 
 ### Seeding the database
 
@@ -135,4 +143,3 @@ tps = 95.329922 (without initial connection time)
 | PostgreSQL Primary/Standby      | 274.221927              | 69.37% (1.44x slowdown) |
 | CockroachDB Single Node Cluster | 159.244610              | 40.28% (2.48x slowdown) |
 | CockroachDB 3 Node Cluster      | 95.329922               | 24.11% (4.15x slowdown) |
-| ------------------------------- | ----------------------- | ----------------------- |
