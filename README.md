@@ -1,108 +1,138 @@
-# PostgreSQL vs. CockroachDB (Single Node and 3-Node Cluster)
+# PostgreSQL vs. CockroachDB Benchmark
 
-This benchmarking report compares the performance of **PostgreSQL** and **CockroachDB** (in both **single-node** and **3-node cluster** configurations) using the **TPC-B** benchmark. TPC-B simulates a banking environment with high transaction throughput, focusing on operations like account balance updates, teller transactions, and branch fund management.
+This benchmarking report compares the performance of **PostgreSQL** and **CockroachDB** using the **TPC-B** benchmark. 
+TPC-B simulates a banking environment with high transaction throughput, focusing on operations like account balance updates, teller transactions, and branch fund management.
 
 ## Environment
 
-- Apple MacBook with Mac M1 Pro
-- PostgreSQL and CockroachDB running inside Docker
-- Docker Resources: 8 CPUs, 7.90 GB Memory
+All databases were running on **CCX13** instances from Hetzner, with these specs:
+
+- 2 vCPUs (AMD, dedicated)
+- 8 GB RAM
+- 80 GB SSD
+
+The benchmark tool was running on a **CX22** instance from Hetzner, with these specs:
+
+- 2 vCPUs (Intel/AMD, shared)
+- 4 GB RAM
+- 40 GB SSD
+
+For the CockroachDB multi node setup or the PostgreSQL primary/standby setup, each node/instance was running on it's own dedicated server on the same local network.
+
+The benchmark was run from another seperate server, also within the same local network, to not have any impact on database performance.
+
+### OS and Versions
+
+- Debian 12
+- CockroachDB 23.4
+- PostgreSQL 15.10
+
+## Benchmark Setup
+
+In this setup I'm using the `pgbench` utility provided by a default PostgreSQL installation. It runs the TPC-B benchmark as mentioned above.
+
+### Seeding the database
+
+```
+pgbench -i -d <database> -h <host> -p <port> -U <user> -n -s 100
+```
+
+It was configured with a scale factor of **100**.
+This means the following amounts of records are created:
+
+- 10,000,000 Accounts
+- 1,000 Tellers
+- 100 Branches
+
+### Running the benchmark
+
+The following command simulates **5000** transactions against the database.
+
+```
+pgbench <database> -h <host> -p <port> -U <user> -n -t 5000
+```
+
 
 ## Benchmark Results
 
+### PostgreSQL Single Instance 
+
 ```
-====================================
-POSTGRES
-------------------------------------
-Seeded tables with:
-- 5000 accounts
-- 500 branches
-- 500 tellers
-Benchmarking TPC-B...
-Transactions:     5000
-Duration:         31.723867416s
-Transactions/Sec: 157.61003960942793
-====================================
-
-====================================
-COCKROACH SINGLE NODE
-------------------------------------
-Seeded tables with:
-- 5000 accounts
-- 500 branches
-- 500 tellers
-Benchmarking TPC-B...
-Transactions:     5000
-Duration:         1m23.00112225s
-Transactions/Sec: 60.24014934328193
-====================================
-
-====================================
-COCKROACH 3 NODES
-------------------------------------
-Seeded tables with:
-- 5000 accounts
-- 500 branches
-- 500 tellers
-Benchmarking TPC-B...
-Transactions:     5000
-Duration:         2m43.683688792s
-Transactions/Sec: 30.546721160186696
-====================================
+pgbench (15.10 (Debian 15.10-0+deb12u1))
+transaction type: <builtin: TPC-B (sort of)>
+scaling factor: 100
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 5000
+number of transactions actually processed: 5000/5000
+number of failed transactions: 0 (0.000%)
+latency average = 2.530 ms
+initial connection time = 7.909 ms
+tps = 395.250137 (without initial connection time)
 ```
 
-## Schema
+### PostgreSQL Primary/Standby with Synchronous Streaming Replication
 
-```sql
-CREATE TABLE pgbench_accounts (
-	aid        INTEGER NOT NULL,
-	bid        INTEGER NOT NULL,
-	abalance   INTEGER NOT NULL,
-	filler     CHAR(84) NOT NULL
-);
-CREATE TABLE pgbench_branches (
-	bid        INTEGER NOT NULL,
-	bbalance   INTEGER NOT NULL,
-	filler     CHAR(88) NOT NULL
-);
-CREATE TABLE pgbench_tellers (
-	tid        INTEGER NOT NULL,
-	bid        INTEGER NOT NULL,
-	tbalance   INTEGER NOT NULL,
-	filler     CHAR(84) NOT NULL
-);
-CREATE TABLE pgbench_history (
-	tid        INTEGER NOT NULL,
-	bid        INTEGER NOT NULL,
-	aid        INTEGER NOT NULL,
-	delta      INTEGER NOT NULL,
-	mtime      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+```
+pgbench (15.10 (Debian 15.10-0+deb12u1))
+transaction type: <builtin: TPC-B (sort of)>
+scaling factor: 100
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 5000
+number of transactions actually processed: 5000/5000
+number of failed transactions: 0 (0.000%)
+latency average = 3.647 ms
+initial connection time = 8.228 ms
+tps = 274.221927 (without initial connection time)
 ```
 
-## Transaction
+### CockroachDB Single Node Cluster
 
-```sql
-BEGIN;
-
--- Update the account balance
-UPDATE pgbench_accounts
-SET abalance = abalance + $1
-WHERE aid = $2;
-
--- Update the teller balance
-UPDATE pgbench_tellers
-SET tbalance = tbalance + $1
-WHERE tid = $2;
-
--- Update the branch balance
-UPDATE pgbench_branches
-SET bbalance = bbalance + $1
-WHERE bid = $2;
-
--- Insert a record into the history table
-INSERT INTO pgbench_history (tid, bid, aid, delta, mtime)
-VALUES ($1, $2, $3, $4, $5);
-
-COMMIT;
 ```
+pgbench (15.10 (Debian 15.10-0+deb12u1), server 13.0.0)
+transaction type: <builtin: TPC-B (sort of)>
+scaling factor: 100
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 5000
+number of transactions actually processed: 5000/5000
+number of failed transactions: 0 (0.000%)
+latency average = 6.280 ms
+initial connection time = 1.440 ms
+tps = 159.244610 (without initial connection time)
+```
+
+### CockroachDB 3 Node Cluster
+
+```
+pgbench (15.10 (Debian 15.10-0+deb12u1), server 13.0.0)
+transaction type: <builtin: TPC-B (sort of)>
+scaling factor: 100
+query mode: simple
+number of clients: 1
+number of threads: 1
+maximum number of tries: 1
+number of transactions per client: 5000
+number of transactions actually processed: 5000/5000
+number of failed transactions: 0 (0.000%)
+latency average = 10.490 ms
+initial connection time = 1.668 ms
+tps = 95.329922 (without initial connection time)
+```
+
+## Benchmark Summary
+
+| Database Configuration          | Transactions per Second | Difference              |
+| ------------------------------- | ----------------------- | ----------------------- |
+| PostgreSQL Single Instance      | 395.250137              | 100.00%                 |
+| PostgreSQL Primary/Standby      | 274.221927              | 69.37% (1.44x slowdown) |
+| CockroachDB Single Node Cluster | 159.244610              | 40.28% (2.48x slowdown) |
+| CockroachDB 3 Node Cluster      | 95.329922               | 24.11% (4.15x slowdown) |
+| ------------------------------- | ----------------------- | ----------------------- |
